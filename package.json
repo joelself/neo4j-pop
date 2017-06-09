@@ -1,0 +1,27 @@
+{
+  "name": "neo4j-pop",
+  "version": "0.1.0",
+  "description": "Add and remove data from neo4j",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joelself/neo4j-pop.git"
+  },
+  "keywords": [
+    "neo4j"
+  ],
+  "author": "Joel",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/joelself/neo4j-pop/issues"
+  },
+  "homepage": "https://github.com/joelself/neo4j-pop#readme",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "readline": "^1.3.0",
+    "ws": "^3.0.0"
+  }
+}
