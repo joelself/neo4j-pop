@@ -1,14 +1,15 @@
-import WebSocket from 'ws';
+var WebSocket = require('ws');
 
 var words = [];
 var nodes = new Map();
 var ipCount = 0;
 var lastAction = true;
 
-const wsAddNode;
-const wsDelNode;
-const wsAddEdge;
-const wsDelEdge;
+var wsAddNode;
+var wsDelNode;
+var wsAddEdge;
+var wsDelEdge;
+readWords();
 function readWords() {
     var lineReader = require('readline').createInterface({
         input: require('fs').createReadStream('./list.txt')
@@ -19,7 +20,7 @@ function readWords() {
         }
     });
     lineReader.on('close', () => {
-        this.populate();
+        populate();
     });
 }
 
@@ -42,27 +43,40 @@ function populate() {
         }
     });
     wsAddNode.on('message', function incoming(data) {
+        console.log(data);
         var json = JSON.parse(data);
         json.edges = [];
         nodes.set(json.id, json);
         if(nodes.size == 10) {
-            wsAddEdge.on('open', function open() {
-                for(var i = 0; i < 24; i++) {
-                    var source = getRandomInt(nodes.length);
-                    var target = getRandomInt(nodes.length);
-                    while(source == target)
-                        target = getRandomInt(nodes.length);
-
-                    var hostSource = nodes[source];
-                    var hostTarget = nodes[target];
-                    console.log(hostSource.hostname + " => " + hostTarget.hostname);
-                    var newEdge = {source: hostSource.id, target: hostTarget.id};
-                    wsAddEdge.send(JSON.stringify(newEdge));
-                    nodes.get(hostSource.id).edges.push(newEdge);
-                    nodes.get(hostTarget.id).edges.push(newEdge);
+            console.log("nodes.size = 10");
+            for(var i = 0; i < 24; i++) {
+                var source = getRandomInt(nodes.size);
+                var target = getRandomInt(nodes.size);
+                while(source == target)
+                    target = getRandomInt(nodes.size);
+                console.log("source num: " + source + ", target num: " + target);
+                var max = source > target ? source : target;
+                var it = nodes.values();
+                var hostSource;
+                var hostTarget;
+                var current;
+                for(var j = 0; j <= max; j++) {
+                    current = it.next();
+                console.log(current.value)
+                    if(j == source)
+                        hostSource = current.value;
+                    else if(j == target)
+                        hostTarget = current.value;
                 }
-                setInterval(doRandomStuff(), 1000);
-            });
+                console.log(hostSource.hostname + " => " + hostTarget.hostname);
+                var newEdge = {source: hostSource.id, target: hostTarget.id};
+                wsAddEdge.send(JSON.stringify(newEdge));
+                nodes.get(hostSource.id).edges.push(newEdge);
+                nodes.get(hostTarget.id).edges.push(newEdge);
+            }
+            setInterval(function() {
+                doRandomStuff();
+            }, 1000);
         }
     });
 }
@@ -81,8 +95,6 @@ function doRandomStuff() {
         console.log("Add node\n\thostname: " + name + ", ip: " + ip);
 
         var newNode = {hostname: name, ip: ip};
-        // Add new node
-        wsAddNode.send(JSON.stringify(newNode));
         newNode.edges = [];
         nodes.set(name, newNode);
 
@@ -91,27 +103,28 @@ function doRandomStuff() {
         for(var i = 0; i < numEdges; i++) {
             var entry = getRandomInt(nodes.size);
             var it = nodes.values();
+            var current;
             for(var j = 0; j < entry; j++) {
-                it.next();
+                current = it.next().value;
             }
             if(getRandomInt(2) == 0) {
                 // Add edge from new node
-                var target = it.next().value;
+                var target = current;
                 var newEdge = {source: newNode.id, target: target.id};
                 console.log("\t" + newNode.hostname + " => " + target.hostname);
-                wsAddEdge.send(JSON.stringify(newEdge));
-                nodes.get(newNode.id).edges.push(newEdge);
+                newNode.edges.push(newEdge);
                 nodes.get(target.id).edges.push(newEdge);
             } else {
                 // Add edge to new node
-                var source = it.next().value;
+                var source = current;
                 var newEdge = {source: source.id, target: newNode.id};
                 console.log("\t" + source.hostname + " => " + newNode.hostname);
-                wsAddEdge.send(JSON.stringify(newEdge));
-                nodes.get(newNode.id).edges.push(newEdge);
+                newNode.edges.push(newEdge);
                 nodes.get(source.id).edges.push(newEdge);
             }
         }
+        // Add new node
+        wsAddNode.send(JSON.stringify(newNode));
     } else {
         // Delete a node
         var entry = getRandomInt(nodes.size);
@@ -123,7 +136,6 @@ function doRandomStuff() {
         console.log("Delete node\n\thostname: " + node.hostname + ", ip: " + node.ip);
         // Delete all edges to/from node first
         node.edges.forEach(function(element) {
-            wsDelEdge.send(JSON.stringify(element));
             console.log("\t" + nodes.get(element.source).hostname + " => " + nodes.get(element.target).hostname);
             if(element.source != node.id) {
                 deleteEdge(nodes.get(element.source), node.id);
@@ -131,9 +143,9 @@ function doRandomStuff() {
                 deleteEdge(nodes.get(element.target), node.id);
             }
         });
-        delete node.edges;
         // Actually delete node
         wsDelNode.send(JSON.stringify(node));
+        delete node.edges;
         nodes.delete(node.id);
     }
     lastAction = !lastAction;
