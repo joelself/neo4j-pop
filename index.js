@@ -58,7 +58,7 @@ function populate() {
         } else {
           json.edges = [];
           nodes.set(json.id, json);
-          if(nodes.size == 10) {
+          if(nodes.size == 1000) {
             populateEdges();
           }
         }
@@ -93,9 +93,9 @@ function populateEdges() {
     nodes.get(hostSource.id).edges.push(newEdge);
     nodes.get(hostTarget.id).edges.push(newEdge);
   }
-  // timerId = setInterval(function() {
-  //   doRandomStuff();
-  // }, 500);
+  timerId = setInterval(function() {
+    doRandomStuff();
+  }, 100);
 }
 
 
